@@ -10,6 +10,9 @@
   "host_permissions": [
     "<all_urls>"
   ],
+  "action": {
+    "default_title": "LocalStorage Sync"
+  },
   "side_panel": {
     "default_path": "src/sidepanel/index.html"
   },
@@ -20,7 +23,7 @@
   "content_scripts": [
     {
       "js": [
-        "assets/index.ts-loader-BD_wXQxy.js"
+        "assets/index.ts-loader-aj9ybqoZ.js"
       ],
       "matches": [
         "<all_urls>"
@@ -39,7 +42,7 @@
         "<all_urls>"
       ],
       "resources": [
-        "assets/index.ts-BQQUknO3.js"
+        "assets/index.ts-Dc-tp1to.js"
       ],
       "use_dynamic_url": false
     }

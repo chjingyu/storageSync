@@ -5,6 +5,9 @@
   "description": "跨站同步 LocalStorage 数据到当前网站",
   "permissions": ["storage", "sidePanel"],
   "host_permissions": ["<all_urls>"],
+  "action": {
+    "default_title": "LocalStorage Sync"
+  },
   "side_panel": {
     "default_path": "src/sidepanel/index.html"
   },

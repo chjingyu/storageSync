@@ -304,7 +304,8 @@ chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() =>
   // setPanelBehavior 在某些 Chrome 版本不可用，静默忽略
 });
 
-chrome.action.onClicked.addListener(async (tab) => {
+if (chrome.action?.onClicked) {
+  chrome.action.onClicked.addListener(async (tab) => {
   try {
     if (isPanelOpen) {
       // 关闭面板
@@ -322,4 +323,5 @@ chrome.action.onClicked.addListener(async (tab) => {
   } catch (err) {
     console.error("[StorageSync SW] toggle 面板失败:", err);
   }
-});
+  });
+}
