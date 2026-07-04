@@ -1,24 +1,30 @@
-import type { SyncConfig, PanelMessage, PanelResponse, CSMessage, CSResponse, CacheEntry } from "../types";
+import type {
+  SyncConfig, PanelMessage, SWMessage, PanelResponse, CheckMatchResponse,
+  CSMessage, CSResponse, CacheEntry, ConfigWithCache
+} from "../types";
 import { loadConfigs, saveConfig, deleteConfig, getConfigById } from "./config-store";
 import { getCache, saveCache, deleteCache } from "./cache-store";
 import { validateSourceUrl, applyMappings, checkMissingKeys, buildSyncResult } from "./sync-engine";
 
 console.log("[StorageSync SW] Service Worker 已启动");
 
+// ===== 面板状态 =====
+let isPanelOpen = false;
+
 // ===== 消息路由 =====
 
 chrome.runtime.onMessage.addListener(
   (
-    message: PanelMessage,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (r: PanelResponse) => void
+    message: SWMessage,
+    sender: chrome.runtime.MessageSender,
+    sendResponse: (r: PanelResponse | CheckMatchResponse) => void
   ) => {
     handleMessage(message).then(sendResponse);
     return true;
   }
 );
 
-async function handleMessage(msg: PanelMessage): Promise<PanelResponse> {
+async function handleMessage(msg: SWMessage): Promise<PanelResponse | CheckMatchResponse> {
   switch (msg.action) {
     case "GET_CONFIGS":
       return handleGetConfigs();
@@ -30,6 +36,12 @@ async function handleMessage(msg: PanelMessage): Promise<PanelResponse> {
       return handleSyncCache(msg.configId);
     case "FORCE_REFRESH":
       return handleForceRefresh(msg.config);
+    case "PANEL_CLOSED":
+      return handlePanelClosed();
+    case "CHECK_MATCH":
+      return handleCheckMatch(msg.origin);
+    case "AUTO_CACHE":
+      return handleAutoCache(msg.configId, msg.data);
     default:
       return { success: false, error: "未知操作" };
   }
@@ -37,9 +49,67 @@ async function handleMessage(msg: PanelMessage): Promise<PanelResponse> {
 
 // ===== 处理器 =====
 
+async function handlePanelClosed(): Promise<PanelResponse> {
+  isPanelOpen = false;
+  return { success: true };
+}
+
+async function handleCheckMatch(origin: string): Promise<CheckMatchResponse> {
+  try {
+    const configs = await loadConfigs();
+    for (const config of configs) {
+      try {
+        const configOrigin = new URL(config.sourceUrl).origin;
+        if (configOrigin === origin) {
+          const srcKeys = config.mappings.map((m) => m.srcKey);
+          return { success: true, data: { configId: config.id, srcKeys } };
+        }
+      } catch {
+        // 配置 URL 无效，跳过
+      }
+    }
+    return { success: true, data: null };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
+async function handleAutoCache(
+  configId: string,
+  data: Record<string, string>
+): Promise<PanelResponse> {
+  try {
+    // 空数据不更新
+    if (Object.keys(data).length === 0) {
+      return { success: true };
+    }
+
+    const existingCache = await getCache(configId);
+    const mergedData = existingCache
+      ? { ...existingCache.data, ...data }
+      : data;
+
+    const cacheEntry: CacheEntry = {
+      configId,
+      data: mergedData,
+      url: existingCache?.url ?? "",
+      fetchedAt: Date.now(),
+    };
+    await saveCache(cacheEntry);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: String(err) };
+  }
+}
+
 async function handleGetConfigs(): Promise<PanelResponse> {
   const configs = await loadConfigs();
-  return { success: true, data: configs };
+  const result: ConfigWithCache[] = [];
+  for (const config of configs) {
+    const cache = await getCache(config.id);
+    result.push({ config, cache });
+  }
+  return { success: true, data: result };
 }
 
 async function handleSaveConfig(config: SyncConfig): Promise<PanelResponse> {
@@ -226,3 +296,30 @@ function sendMessageToTab<M, R>(tabId: number, message: M): Promise<R> {
     });
   });
 }
+
+// ===== Side Panel 开关 =====
+
+// 阻止默认行为：点击图标不自动打开面板
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {
+  // setPanelBehavior 在某些 Chrome 版本不可用，静默忽略
+});
+
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    if (isPanelOpen) {
+      // 关闭面板
+      await chrome.sidePanel.setOptions({ enabled: false });
+      await chrome.sidePanel.setOptions({ enabled: true });
+      isPanelOpen = false;
+    } else {
+      // 打开面板
+      const windowId = tab.windowId;
+      if (windowId) {
+        await chrome.sidePanel.open({ windowId });
+        isPanelOpen = true;
+      }
+    }
+  } catch (err) {
+    console.error("[StorageSync SW] toggle 面板失败:", err);
+  }
+});
