@@ -5,7 +5,8 @@
   "description": "跨站同步 LocalStorage 数据到当前网站",
   "permissions": [
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"

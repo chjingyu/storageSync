@@ -3,7 +3,7 @@
   "name": "LocalStorage Sync",
   "version": "1.0.0",
   "description": "跨站同步 LocalStorage 数据到当前网站",
-  "permissions": ["storage", "sidePanel"],
+  "permissions": ["storage", "sidePanel", "scripting"],
   "host_permissions": ["<all_urls>"],
   "action": {
     "default_title": "LocalStorage Sync"

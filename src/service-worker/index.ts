@@ -189,24 +189,31 @@ async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
       await waitForTabLoad(sourceTabId, config.sourceUrl);
     }
 
-    // 读取源站 localStorage
+    // 读取源站 localStorage（用 scripting.executeScript 代替 sendMessage，避免 CS 未注入问题）
     const srcKeys = config.mappings.map((m) => m.srcKey);
-    const readResult = await sendMessageToTab<CSMessage, CSResponse>(
-      sourceTabId,
-      { action: "READ_STORAGE", keys: srcKeys }
-    );
+    const readResult = await chrome.scripting.executeScript({
+      target: { tabId: sourceTabId },
+      func: (keys: string[]) => {
+        const data: Record<string, string> = {};
+        for (const key of keys) {
+          const value = localStorage.getItem(key);
+          if (value !== null) data[key] = value;
+        }
+        return data;
+      },
+      args: [srcKeys],
+    });
 
-    if (!readResult.success) {
-      return { success: false, error: `读取源站失败: ${readResult.error}` };
-    }
-
-    // 过滤 null 值，确保类型为 Record<string, string>
-    const rawData = readResult.data ?? {};
+    const rawData = readResult[0]?.result ?? {};
     const sourceData: Record<string, string> = {};
     for (const [k, v] of Object.entries(rawData)) {
-      if (v !== null && v !== undefined) {
+      if (v !== null && v !== undefined && typeof v === "string") {
         sourceData[k] = v;
       }
+    }
+
+    if (Object.keys(sourceData).length === 0) {
+      return { success: false, error: `源站没有任何匹配的 key（${srcKeys.join("、")}）` };
     }
 
     // 保存缓存
@@ -304,14 +311,13 @@ function waitForTabLoad(tabId: number, url: string): Promise<void> {
   });
 }
 
-function sendMessageToTab<M, R>(tabId: number, message: M, retries = 3): Promise<R> {
+function sendMessageToTab<M, R>(tabId: number, message: M, retries = 2): Promise<R> {
   return new Promise((resolve, reject) => {
     function attempt(n: number) {
       chrome.tabs.sendMessage(tabId, message, (response: R) => {
         if (chrome.runtime.lastError) {
           const msg = chrome.runtime.lastError.message ?? "";
           if (n > 0 && msg.includes("Receiving end does not exist")) {
-            console.debug(`[StorageSync SW] CS 未就绪，${500}ms 后重试 (剩余${n}次) tabId=${tabId}`);
             setTimeout(() => attempt(n - 1), 500);
           } else {
             reject(new Error(msg));
