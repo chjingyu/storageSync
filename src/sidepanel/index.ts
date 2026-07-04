@@ -377,8 +377,7 @@ function updateRemoveButtons() {
   rows.forEach((row) => {
     const btn = row.querySelector("[data-action='remove-mapping']") as HTMLButtonElement | null;
     if (btn) {
-      if (soleRow) btn.setAttribute("disabled", "");
-      else btn.removeAttribute("disabled");
+      btn.disabled = soleRow;
     }
   });
 }
