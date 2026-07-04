@@ -304,15 +304,24 @@ function waitForTabLoad(tabId: number, url: string): Promise<void> {
   });
 }
 
-function sendMessageToTab<M, R>(tabId: number, message: M): Promise<R> {
+function sendMessageToTab<M, R>(tabId: number, message: M, retries = 3): Promise<R> {
   return new Promise((resolve, reject) => {
-    chrome.tabs.sendMessage(tabId, message, (response: R) => {
-      if (chrome.runtime.lastError) {
-        reject(new Error(chrome.runtime.lastError.message));
-      } else {
-        resolve(response);
-      }
-    });
+    function attempt(n: number) {
+      chrome.tabs.sendMessage(tabId, message, (response: R) => {
+        if (chrome.runtime.lastError) {
+          const msg = chrome.runtime.lastError.message ?? "";
+          if (n > 0 && msg.includes("Receiving end does not exist")) {
+            console.debug(`[StorageSync SW] CS 未就绪，${500}ms 后重试 (剩余${n}次) tabId=${tabId}`);
+            setTimeout(() => attempt(n - 1), 500);
+          } else {
+            reject(new Error(msg));
+          }
+        } else {
+          resolve(response);
+        }
+      });
+    }
+    attempt(retries);
   });
 }
 
