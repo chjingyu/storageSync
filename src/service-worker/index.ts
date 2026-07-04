@@ -263,15 +263,21 @@ async function writeToCurrentTab(
     return { success: false, error: `源站数据中没有任何匹配的 key（缺失: ${names}）` };
   }
 
-  const writeResult = await sendMessageToTab<CSMessage, CSResponse>(
-    currentTab.id,
-    { action: "WRITE_STORAGE", entries }
-  );
-
-  if (!writeResult.success) {
+  // 用 scripting.executeScript 写入，避免 CS 未注入/断开问题
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId: currentTab.id },
+      func: (kv: Record<string, string>) => {
+        for (const [k, v] of Object.entries(kv)) {
+          try { localStorage.setItem(k, v); } catch { /* quota exceeded etc */ }
+        }
+      },
+      args: [entries],
+    });
+  } catch (err) {
     return {
       success: false,
-      error: buildSyncResult(0, missingKeys, writeResult.error).message,
+      error: buildSyncResult(0, missingKeys, String(err)).message,
     };
   }
 
