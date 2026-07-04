@@ -151,7 +151,7 @@ function renderForm(config: SyncConfig): string {
           <input type="text" value="${escapeHtml(m.srcKey)}" placeholder="源站 key" data-field="srcKey" data-index="${i}">
           <span class="arrow">→</span>
           <input type="text" value="${escapeHtml(m.tgtKey)}" placeholder="目标 key" data-field="tgtKey" data-index="${i}">
-          <button class="btn btn-danger" data-action="remove-mapping" data-index="${i}" ${config.mappings.length <= 1 ? "disabled" : ""}>✕</button>
+          <button class="btn btn-danger" data-action="remove-mapping" data-index="${i}">✕</button>
         </div>`
     )
     .join("");
@@ -200,6 +200,9 @@ function bindEvents() {
 
   // 滚动时隐藏 tooltip
   window.addEventListener("scroll", hideTooltip, { once: true });
+
+  // 确保删除按钮 disabled 状态一致（初始渲染 + 每次重新绑定）
+  updateRemoveButtons();
 }
 
 function _delegatedClick(e: Event) {
