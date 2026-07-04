@@ -246,7 +246,8 @@ async function writeToCurrentTab(
   const missingKeys = checkMissingKeys(syncConfig, cache.data);
 
   if (Object.keys(entries).length === 0) {
-    return { success: false, error: "源站数据中没有任何匹配的 key" };
+    const names = missingKeys.join("、");
+    return { success: false, error: `源站数据中没有任何匹配的 key（缺失: ${names}）` };
   }
 
   const writeResult = await sendMessageToTab<CSMessage, CSResponse>(
