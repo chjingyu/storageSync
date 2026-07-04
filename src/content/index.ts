@@ -118,4 +118,7 @@ export async function autoDetectAndCache(): Promise<void> {
 }
 
 // 在 document_idle 时自动触发（Content Script 运行时机即 document_idle）
-autoDetectAndCache();
+// 仅在扩展上下文（非测试环境）自动触发
+if (chrome.runtime?.id) {
+  autoDetectAndCache();
+}

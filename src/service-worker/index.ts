@@ -16,7 +16,7 @@ let isPanelOpen = false;
 chrome.runtime.onMessage.addListener(
   (
     message: SWMessage,
-    sender: chrome.runtime.MessageSender,
+    _sender: chrome.runtime.MessageSender,
     sendResponse: (r: PanelResponse | CheckMatchResponse) => void
   ) => {
     handleMessage(message).then(sendResponse);
