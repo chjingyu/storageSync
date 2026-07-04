@@ -60,6 +60,12 @@ body {
   align-items: flex-start;
 }
 .card-info { flex: 1; min-width: 0; }
+.card-header-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
 .card-name {
   font-size: 14px;
   font-weight: 600;
@@ -121,6 +127,20 @@ body {
 }
 .btn-danger:hover:not(:disabled) {
   background: #fef2f2;
+}
+.icon-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  line-height: 1;
+}
+.icon-btn:hover {
+  background: #f3f4f6;
+  color: var(--text);
 }
 .btn-add {
   width: 100%;

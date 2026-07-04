@@ -86,8 +86,8 @@ function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[], conf
           ${rows}
         </tbody>
       </table>
-      <div class="cache-time">⏱ 缓存更新于 ${timeStr}</div>
-    </div>`;
+    </div>
+    <div class="cache-time">⏱ 缓存更新于 ${timeStr}</div>`;
 }
 
 function formatCacheTime(ms: number): string {
@@ -113,7 +113,7 @@ function renderConfigList(): string {
       return `
         <div class="config-card" data-id="${config.id}">
           <div class="card-header">
-            <div class="card-info" data-action="edit" data-id="${config.id}">
+            <div class="card-info">
               <div class="card-name">${escapeHtml(config.name)}</div>
               <div class="card-url">${escapeHtml(config.sourceUrl)}</div>
               <div class="card-meta">
@@ -122,7 +122,10 @@ function renderConfigList(): string {
                 ${status ? ` · ${status.message}` : ""}
               </div>
             </div>
-            <button class="btn btn-danger" data-action="delete" data-id="${config.id}" title="删除">✕</button>
+            <div class="card-header-actions">
+              <button class="btn icon-btn" data-action="edit" data-id="${config.id}" title="编辑">✎</button>
+              <button class="btn icon-btn" data-action="delete" data-id="${config.id}" title="删除">✕</button>
+            </div>
           </div>
           ${renderCacheTable(cache, config.mappings, config.id)}
           <div class="card-actions">
