@@ -32,7 +32,8 @@ export type PanelMessage =
   | { action: "SAVE_CONFIG"; config: SyncConfig }
   | { action: "DELETE_CONFIG"; id: string }
   | { action: "SYNC_CACHE"; configId: string }
-  | { action: "FORCE_REFRESH"; config: SyncConfig };
+  | { action: "FORCE_REFRESH"; config: SyncConfig }
+  | { action: "PANEL_CLOSED" };
 
 /** SW → Side Panel 响应 */
 export type PanelResponse =
@@ -65,3 +66,26 @@ export const CACHE_KEY_PREFIX = "cache:";
 export function cacheKey(configId: string): string {
   return `${CACHE_KEY_PREFIX}${configId}`;
 }
+
+// ===== 新增：缓存 + 配置聚合 =====
+
+/** GET_CONFIGS 响应中配置与缓存的聚合体 */
+export interface ConfigWithCache {
+  config: SyncConfig;
+  cache: CacheEntry | null;
+}
+
+// ===== 新增：Content Script → SW 消息 =====
+
+/** Content Script 主动向 SW 发送的消息 */
+export type CSAutoMessage =
+  | { action: "CHECK_MATCH"; origin: string }
+  | { action: "AUTO_CACHE"; configId: string; data: Record<string, string> };
+
+/** SW 对 CHECK_MATCH 的响应 */
+export type CheckMatchResponse =
+  | { success: true; data: { configId: string; srcKeys: string[] } | null }
+  | { success: false; error: string };
+
+/** SW 接收的全部消息（来源：Side Panel + Content Script） */
+export type SWMessage = PanelMessage | CSAutoMessage;
