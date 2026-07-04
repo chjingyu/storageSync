@@ -181,8 +181,13 @@ async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
       isNewTab = true;
     }
 
-    // 等待源站加载完成
-    await waitForTabLoad(sourceTabId, config.sourceUrl);
+    // 等待源站加载完成（已加载的复用 Tab 跳过等待）
+    const tab = await chrome.tabs.get(sourceTabId);
+    if (!isNewTab && tab.status === "complete") {
+      console.log(`[StorageSync SW] 复用已加载的 Tab: tabId=${sourceTabId}`);
+    } else {
+      await waitForTabLoad(sourceTabId, config.sourceUrl);
+    }
 
     // 读取源站 localStorage
     const srcKeys = config.mappings.map((m) => m.srcKey);
