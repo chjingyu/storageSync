@@ -60,11 +60,11 @@ function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[], conf
     .map((m) => {
       const value = cacheData[m.srcKey];
       const display = value !== undefined ? escapeHtml(value) : "—";
-      const tooltip = value !== undefined ? ` data-tooltip="${escapeHtml(value)}"` : "";
+      const tooltip = value !== undefined ? ` data-tooltip="${attrEscape(value)}"` : "";
       return `
         <tr>
-          <td>${escapeHtml(m.srcKey)}</td>
-          <td>${escapeHtml(m.tgtKey)}</td>
+          <td data-tooltip="${attrEscape(m.srcKey)}">${escapeHtml(m.srcKey)}</td>
+          <td data-tooltip="${attrEscape(m.tgtKey)}">${escapeHtml(m.tgtKey)}</td>
           <td${tooltip}>${display}</td>
         </tr>`;
     })
@@ -453,4 +453,12 @@ function escapeHtml(str: string): string {
   const div = document.createElement("div");
   div.textContent = str;
   return div.innerHTML;
+}
+
+function attrEscape(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }

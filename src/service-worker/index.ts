@@ -147,6 +147,7 @@ async function handleSyncCache(configId: string): Promise<PanelResponse> {
 
 async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
   let sourceTabId: number | null = null;
+  let isNewTab = false;
 
   try {
     if (!validateSourceUrl(config.sourceUrl)) {
@@ -162,23 +163,31 @@ async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
       return { success: false, error: "当前页面不支持 localStorage 写入" };
     }
 
-    // 静默打开源站
-    const sourceTab = await chrome.tabs.create({
-      url: config.sourceUrl,
-      active: false,
-    });
-    if (!sourceTab.id) {
-      return { success: false, error: "无法打开源站页面" };
+    // 优先复用已打开的源站 Tab
+    const sourceOrigin = new URL(config.sourceUrl).origin;
+    const [existingTab] = await chrome.tabs.query({ url: `${sourceOrigin}/*` });
+
+    if (existingTab?.id) {
+      sourceTabId = existingTab.id;
+    } else {
+      const sourceTab = await chrome.tabs.create({
+        url: config.sourceUrl,
+        active: false,
+      });
+      if (!sourceTab.id) {
+        return { success: false, error: "无法打开源站页面" };
+      }
+      sourceTabId = sourceTab.id;
+      isNewTab = true;
     }
-    sourceTabId = sourceTab.id;
 
     // 等待源站加载完成
-    await waitForTabLoad(sourceTab.id);
+    await waitForTabLoad(sourceTabId);
 
     // 读取源站 localStorage
     const srcKeys = config.mappings.map((m) => m.srcKey);
     const readResult = await sendMessageToTab<CSMessage, CSResponse>(
-      sourceTab.id,
+      sourceTabId,
       { action: "READ_STORAGE", keys: srcKeys }
     );
 
@@ -204,15 +213,17 @@ async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
     };
     await saveCache(cacheEntry);
 
-    // 关闭源站 Tab
-    await chrome.tabs.remove(sourceTab.id);
-    sourceTabId = null;
+    // 仅新建的 Tab 才关闭
+    if (isNewTab && sourceTabId !== null) {
+      await chrome.tabs.remove(sourceTabId);
+      sourceTabId = null;
+    }
 
     // 写入当前页
     return await writeToCurrentTab(config, cacheEntry);
 
   } catch (err) {
-    if (sourceTabId !== null) {
+    if (sourceTabId !== null && isNewTab) {
       try { await chrome.tabs.remove(sourceTabId); } catch { /* ignore */ }
     }
     return { success: false, error: `强制刷新失败: ${String(err)}` };
