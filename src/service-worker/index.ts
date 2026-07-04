@@ -1,4 +1,4 @@
-import type { PanelMessage, PanelResponse, CSMessage, CSResponse } from "../types";
+import type { SyncConfig, PanelMessage, PanelResponse, CSMessage, CSResponse, CacheEntry } from "../types";
 import { loadConfigs, saveConfig, deleteConfig, getConfigById } from "./config-store";
 import { getCache, saveCache, deleteCache } from "./cache-store";
 import { validateSourceUrl, applyMappings, checkMissingKeys, buildSyncResult } from "./sync-engine";
@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener(
     sendResponse: (r: PanelResponse) => void
   ) => {
     handleMessage(message).then(sendResponse);
-    return true; // 异步响应
+    return true;
   }
 );
 
@@ -31,7 +31,7 @@ async function handleMessage(msg: PanelMessage): Promise<PanelResponse> {
     case "FORCE_REFRESH":
       return handleForceRefresh(msg.config);
     default:
-      return { success: false, error: `未知操作` };
+      return { success: false, error: "未知操作" };
   }
 }
 
@@ -42,7 +42,7 @@ async function handleGetConfigs(): Promise<PanelResponse> {
   return { success: true, data: configs };
 }
 
-async function handleSaveConfig(config: PanelMessage extends { action: "SAVE_CONFIG"; config: infer C } ? C : never): Promise<PanelResponse> {
+async function handleSaveConfig(config: SyncConfig): Promise<PanelResponse> {
   try {
     await saveConfig(config);
     return { success: true };
@@ -75,9 +75,7 @@ async function handleSyncCache(configId: string): Promise<PanelResponse> {
   }
 }
 
-async function handleForceRefresh(config: PanelMessage extends { action: "FORCE_REFRESH"; config: infer C } ? C : never): Promise<PanelResponse> {
-  if (!config) return { success: false, error: "配置数据缺失" };
-
+async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
   let sourceTabId: number | null = null;
 
   try {
@@ -108,7 +106,7 @@ async function handleForceRefresh(config: PanelMessage extends { action: "FORCE_
     await waitForTabLoad(sourceTab.id);
 
     // 读取源站 localStorage
-    const srcKeys = config.mappings.map((m: { srcKey: string }) => m.srcKey);
+    const srcKeys = config.mappings.map((m) => m.srcKey);
     const readResult = await sendMessageToTab<CSMessage, CSResponse>(
       sourceTab.id,
       { action: "READ_STORAGE", keys: srcKeys }
@@ -118,10 +116,17 @@ async function handleForceRefresh(config: PanelMessage extends { action: "FORCE_
       return { success: false, error: `读取源站失败: ${readResult.error}` };
     }
 
-    const sourceData = readResult.data ?? {};
+    // 过滤 null 值，确保类型为 Record<string, string>
+    const rawData = readResult.data ?? {};
+    const sourceData: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rawData)) {
+      if (v !== null && v !== undefined) {
+        sourceData[k] = v;
+      }
+    }
 
     // 保存缓存
-    const cacheEntry = {
+    const cacheEntry: CacheEntry = {
       configId: config.id,
       data: sourceData,
       url: config.sourceUrl,
@@ -156,10 +161,8 @@ async function writeToCurrentTab(
   }
 
   const entries = applyMappings(config.mappings, cache.data);
-  const missingKeys = checkMissingKeys(
-    { mappings: config.mappings } as Parameters<typeof checkMissingKeys>[0],
-    cache.data
-  );
+  const syncConfig = { mappings: config.mappings, id: "", name: "", sourceUrl: "", createdAt: 0, updatedAt: 0 };
+  const missingKeys = checkMissingKeys(syncConfig, cache.data);
 
   if (Object.keys(entries).length === 0) {
     return { success: false, error: "源站数据中没有任何匹配的 key" };
@@ -173,7 +176,7 @@ async function writeToCurrentTab(
   if (!writeResult.success) {
     return {
       success: false,
-      data: buildSyncResult(0, missingKeys, writeResult.error),
+      error: buildSyncResult(0, missingKeys, writeResult.error).message,
     };
   }
 
@@ -189,7 +192,7 @@ function waitForTabLoad(tabId: number): Promise<void> {
       reject(new Error("源站加载超时"));
     }, 15000);
 
-    const listener = (updatedTabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+    const listener = (updatedTabId: number, changeInfo: { status?: string }) => {
       if (updatedTabId === tabId && changeInfo.status === "complete") {
         clearTimeout(timeout);
         chrome.tabs.onUpdated.removeListener(listener);

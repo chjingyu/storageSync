@@ -1,4 +1,4 @@
-/* src/sidepanel/styles.css — 占位基础样式 */
+/* src/sidepanel/styles.css */
 :root {
   --bg: #ffffff;
   --text: #1a1a2e;
@@ -6,24 +6,255 @@
   --border: #e5e7eb;
   --primary: #3b82f6;
   --primary-hover: #2563eb;
+  --danger: #ef4444;
+  --danger-hover: #dc2626;
   --success: #10b981;
-  --error: #ef4444;
   --warn: #f59e0b;
   --card-bg: #f9fafb;
   --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--text);
   background: var(--bg);
   width: 100%;
   min-height: 100vh;
+  line-height: 1.5;
 }
 
-.app { padding: 16px; }
-.app-header h1 { font-size: 18px; font-weight: 600; }
-.placeholder { color: var(--text-secondary); text-align: center; padding: 40px 0; }
+.app { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+/* ===== 标题栏 ===== */
+.app-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.app-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ===== 空状态 ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px 16px;
+  color: var(--text-secondary);
+}
+.empty-state p { margin-bottom: 12px; }
+.empty-state .icon { font-size: 32px; margin-bottom: 8px; }
+
+/* ===== 配置卡片 ===== */
+.config-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+  box-shadow: var(--shadow);
+}
+.config-card:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.config-card + .config-card { margin-top: 8px; }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.card-info { flex: 1; min-width: 0; }
+.card-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.card-url {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+.card-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* ===== 按钮 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+.btn-outline {
+  background: var(--bg);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-danger {
+  background: transparent;
+  color: var(--danger);
+  border: none;
+  padding: 4px 8px;
+}
+.btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+}
+.btn-add {
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  background: transparent;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-add:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ===== 映射列表 ===== */
+.mapping-list {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.mapping-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 3px 0;
+}
+.mapping-arrow {
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+/* ===== 表单 ===== */
+.config-form {
+  background: var(--card-bg);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 14px;
+}
+.form-group { margin-bottom: 10px; }
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+.form-group input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-group input:focus {
+  border-color: var(--primary);
+}
+
+.mapping-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.mapping-inputs input {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+}
+.mapping-inputs input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+.mapping-inputs .arrow { color: var(--text-secondary); flex-shrink: 0; }
+
+.btn-add-mapping {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.btn-add-mapping:hover { text-decoration: underline; }
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* ===== 状态提示 ===== */
+.status-bar {
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  margin-top: 8px;
+}
+.status-success { background: #ecfdf5; color: var(--success); }
+.status-partial { background: #fffbeb; color: var(--warn); }
+.status-error { background: #fef2f2; color: var(--danger); }
+.status-loading { background: #eff6ff; color: var(--primary); }
+
+/* ===== 加载动画 ===== */
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
