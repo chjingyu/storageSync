@@ -200,9 +200,6 @@ function bindEvents() {
 
   // 滚动时隐藏 tooltip
   window.addEventListener("scroll", hideTooltip, { once: true });
-
-  // 确保删除按钮 disabled 状态一致（初始渲染 + 每次重新绑定）
-  updateRemoveButtons();
 }
 
 function _delegatedClick(e: Event) {
@@ -359,27 +356,11 @@ function addMappingRow() {
     <button class="btn btn-danger" data-action="remove-mapping" data-index="${index}">✕</button>
   `;
   container.appendChild(row);
-  updateRemoveButtons();
 }
 
 function removeMappingRow(el: Element) {
   const row = el.closest(".mapping-inputs");
   if (row) row.remove();
-  updateRemoveButtons();
-}
-
-/** 重新检查：仅剩 1 行时禁用删除按钮 */
-function updateRemoveButtons() {
-  const container = document.getElementById("mapping-rows");
-  if (!container) return;
-  const rows = container.querySelectorAll(".mapping-inputs");
-  const soleRow = rows.length <= 1;
-  rows.forEach((row) => {
-    const btn = row.querySelector("[data-action='remove-mapping']") as HTMLButtonElement | null;
-    if (btn) {
-      btn.disabled = soleRow;
-    }
-  });
 }
 
 // ===== 同步操作 =====
