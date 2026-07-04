@@ -141,11 +141,17 @@ body {
 .icon-btn:hover {
   background: #f3f4f6;
 }
-.icon-btn-edit:hover {
+.icon-btn-edit {
   color: var(--primary);
 }
-.icon-btn-delete:hover {
+.icon-btn-edit:hover {
+  background: #eff6ff;
+}
+.icon-btn-delete {
   color: var(--danger);
+}
+.icon-btn-delete:hover {
+  background: #fef2f2;
 }
 .btn-add {
   width: 100%;
