@@ -132,15 +132,20 @@ body {
   background: transparent;
   border: none;
   padding: 4px 6px;
-  color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
   border-radius: 4px;
   line-height: 1;
+  color: var(--text-secondary);
 }
 .icon-btn:hover {
   background: #f3f4f6;
-  color: var(--text);
+}
+.icon-btn-edit:hover {
+  color: var(--primary);
+}
+.icon-btn-delete:hover {
+  color: var(--danger);
 }
 .btn-add {
   width: 100%;

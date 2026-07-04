@@ -123,8 +123,8 @@ function renderConfigList(): string {
               </div>
             </div>
             <div class="card-header-actions">
-              <button class="btn icon-btn" data-action="edit" data-id="${config.id}" title="编辑">✎</button>
-              <button class="btn icon-btn" data-action="delete" data-id="${config.id}" title="删除">✕</button>
+              <button class="btn icon-btn icon-btn-edit" data-action="edit" data-id="${config.id}" title="编辑">✎</button>
+              <button class="btn icon-btn icon-btn-delete" data-action="delete" data-id="${config.id}" title="删除">✕</button>
             </div>
           </div>
           ${renderCacheTable(cache, config.mappings, config.id)}
@@ -178,32 +178,50 @@ function renderForm(config: SyncConfig): string {
     </div>`;
 }
 
-// ===== 事件绑定 =====
+// ===== 事件绑定 (事件委托，避免重复绑定) =====
+let _tooltipUnbind: (() => void) | null = null;
+
 function bindEvents() {
-  document.querySelectorAll("[data-action]").forEach((el) => {
-    const action = el.getAttribute("data-action")!;
-    const id = el.getAttribute("data-id");
+  const appMain = document.querySelector(".app-main");
+  if (!appMain) return;
 
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      handleAction(action, id, el);
-    });
-  });
+  // 点击事件：所有 [data-action] 统一委托
+  appMain.removeEventListener("click", _delegatedClick);
+  appMain.addEventListener("click", _delegatedClick);
 
-  // === Tooltip: 缓存值列 hover ===
-  document.querySelectorAll("[data-tooltip]").forEach((el) => {
-    el.addEventListener("mouseenter", () => {
-      const content = el.getAttribute("data-tooltip");
-      if (content) showTooltip(el as HTMLElement, content);
-    });
-    el.addEventListener("mouseleave", () => {
-      hideTooltip();
-    });
-  });
+  // Tooltip: 统一委托
+  if (_tooltipUnbind) _tooltipUnbind();
+  appMain.addEventListener("mouseenter", _delegatedTooltipEnter, true);
+  appMain.addEventListener("mouseleave", _delegatedTooltipLeave, true);
+  _tooltipUnbind = () => {
+    appMain.removeEventListener("mouseenter", _delegatedTooltipEnter, true);
+    appMain.removeEventListener("mouseleave", _delegatedTooltipLeave, true);
+  };
 
   // 滚动时隐藏 tooltip
-  const hideOnScroll = () => hideTooltip();
-  window.addEventListener("scroll", hideOnScroll, { once: true });
+  window.addEventListener("scroll", hideTooltip, { once: true });
+}
+
+function _delegatedClick(e: Event) {
+  const target = (e.target as HTMLElement).closest("[data-action]");
+  if (!target) return;
+  e.stopPropagation();
+  const action = target.getAttribute("data-action")!;
+  const id = target.getAttribute("data-id");
+  handleAction(action, id, target);
+}
+
+function _delegatedTooltipEnter(e: Event) {
+  const target = (e.target as HTMLElement).closest("[data-tooltip]");
+  if (!target) return;
+  const content = target.getAttribute("data-tooltip");
+  if (content) showTooltip(target as HTMLElement, content);
+}
+
+function _delegatedTooltipLeave(e: Event) {
+  const target = (e.target as HTMLElement).closest("[data-tooltip]");
+  if (!target) return;
+  hideTooltip();
 }
 
 async function handleAction(action: string, id: string | null, el: Element) {
@@ -338,12 +356,28 @@ function addMappingRow() {
     <button class="btn btn-danger" data-action="remove-mapping" data-index="${index}">✕</button>
   `;
   container.appendChild(row);
-  bindEvents();
+  updateRemoveButtons();
 }
 
 function removeMappingRow(el: Element) {
   const row = el.closest(".mapping-inputs");
   if (row) row.remove();
+  updateRemoveButtons();
+}
+
+/** 重新检查：仅剩 1 行时禁用删除按钮 */
+function updateRemoveButtons() {
+  const container = document.getElementById("mapping-rows");
+  if (!container) return;
+  const rows = container.querySelectorAll(".mapping-inputs");
+  const soleRow = rows.length <= 1;
+  rows.forEach((row) => {
+    const btn = row.querySelector("[data-action='remove-mapping']") as HTMLButtonElement | null;
+    if (btn) {
+      if (soleRow) btn.setAttribute("disabled", "");
+      else btn.removeAttribute("disabled");
+    }
+  });
 }
 
 // ===== 同步操作 =====
