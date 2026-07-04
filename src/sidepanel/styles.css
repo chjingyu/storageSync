@@ -29,15 +29,6 @@ body {
 
 .app { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 
-/* ===== 标题栏 ===== */
-.app-header {
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border);
-}
-.app-header h1 {
-  font-size: 16px;
-  font-weight: 600;
-}
 
 /* ===== 空状态 ===== */
 .empty-state {
@@ -258,3 +249,53 @@ body {
   animation: spin 0.6s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== 缓存表格 ===== */
+.cache-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.cache-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 6px 8px;
+  background: var(--bg);
+  border-bottom: 2px solid var(--border);
+  font-size: 11px;
+}
+.cache-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cache-table th:nth-child(1),
+.cache-table td:nth-child(1) {
+  width: 25%;
+}
+.cache-table th:nth-child(2),
+.cache-table td:nth-child(2) {
+  width: 25%;
+}
+.cache-table th:nth-child(3),
+.cache-table td:nth-child(3) {
+  width: 50%;
+}
+
+.cache-time {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+.cache-none {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-style: italic;
+}

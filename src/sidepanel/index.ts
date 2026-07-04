@@ -1,7 +1,7 @@
-import type { SyncConfig, KeyMapping, PanelMessage, PanelResponse, SyncResult } from "../types";
+import type { SyncConfig, KeyMapping, PanelMessage, PanelResponse, SyncResult, ConfigWithCache, CacheEntry } from "../types";
 
 // ===== 状态 =====
-let configs: SyncConfig[] = [];
+let configsWithCache: ConfigWithCache[] = [];
 let editingId: string | null = null;
 let syncingIds: Set<string> = new Set();
 let statusMessages: Map<string, SyncResult> = new Map();
@@ -11,12 +11,23 @@ document.addEventListener("DOMContentLoaded", () => {
   loadAndRender();
 });
 
+// pagehide — 通知 SW 面板已关闭
+window.addEventListener("pagehide", () => {
+  chrome.runtime.sendMessage({ action: "PANEL_CLOSED" } as PanelMessage);
+});
+
 async function loadAndRender() {
   const resp = await sendMessage({ action: "GET_CONFIGS" });
   if (resp.success && Array.isArray(resp.data)) {
-    configs = resp.data as SyncConfig[];
+    configsWithCache = resp.data as ConfigWithCache[];
   }
   render();
+}
+
+// 辅助：根据 configId 查找缓存
+function getCacheForConfig(configId: string): CacheEntry | null {
+  const item = configsWithCache.find((c) => c.config.id === configId);
+  return item?.cache ?? null;
 }
 
 // ===== 渲染 =====
@@ -27,7 +38,7 @@ function render() {
     if (editingId === "__new__") {
       main.innerHTML = renderForm(createEmptyConfig());
     } else {
-      const config = configs.find((c) => c.id === editingId);
+      const config = configsWithCache.find((c) => c.config.id === editingId)?.config;
       if (config) main.innerHTML = renderForm({ ...config });
       else { editingId = null; render(); return; }
     }
@@ -38,8 +49,50 @@ function render() {
   bindEvents();
 }
 
+function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[]): string {
+  if (!cache || Object.keys(cache.data).length === 0) {
+    return `<div class="cache-none">暂无缓存</div>`;
+  }
+
+  const cacheData = cache.data;
+  const rows = mappings
+    .map((m) => {
+      const value = cacheData[m.srcKey];
+      const display = value !== undefined ? escapeHtml(value) : "—";
+      const tooltip = value !== undefined ? ` title="${escapeHtml(value)}"` : "";
+      return `
+        <tr>
+          <td>${escapeHtml(m.srcKey)}</td>
+          <td>${escapeHtml(m.tgtKey)}</td>
+          <td${tooltip}>${display}</td>
+        </tr>`;
+    })
+    .join("");
+
+  const timeStr = new Date(cache.fetchedAt).toLocaleString("zh-CN");
+
+  return `
+    <table class="cache-table">
+      <thead>
+        <tr>
+          <th>源站 Key</th>
+          <th>目标 Key</th>
+          <th>缓存值</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+    <div class="cache-time">⏱ 缓存更新于 ${timeStr}</div>`;
+}
+
+function formatCacheTime(ms: number): string {
+  return new Date(ms).toLocaleString("zh-CN");
+}
+
 function renderConfigList(): string {
-  if (configs.length === 0) {
+  if (configsWithCache.length === 0) {
     return `
       <div class="empty-state">
         <div class="icon">📋</div>
@@ -48,38 +101,31 @@ function renderConfigList(): string {
       </div>`;
   }
 
-  return configs
-    .map((c) => {
-      const status = statusMessages.get(c.id);
-      const isSyncing = syncingIds.has(c.id);
+  return configsWithCache
+    .map(({ config, cache }) => {
+      const status = statusMessages.get(config.id);
+      const isSyncing = syncingIds.has(config.id);
 
       return `
-        <div class="config-card" data-id="${c.id}">
+        <div class="config-card" data-id="${config.id}">
           <div class="card-header">
-            <div class="card-info" data-action="edit" data-id="${c.id}">
-              <div class="card-name">${escapeHtml(c.name)}</div>
-              <div class="card-url">${escapeHtml(c.sourceUrl)}</div>
+            <div class="card-info" data-action="edit" data-id="${config.id}">
+              <div class="card-name">${escapeHtml(config.name)}</div>
+              <div class="card-url">${escapeHtml(config.sourceUrl)}</div>
               <div class="card-meta">
-                ${c.mappings.length} 个映射
+                ${config.mappings.length} 个映射
                 ${status ? ` · ${status.message}` : ""}
               </div>
             </div>
-            <button class="btn btn-danger" data-action="delete" data-id="${c.id}" title="删除">✕</button>
+            <button class="btn btn-danger" data-action="delete" data-id="${config.id}" title="删除">✕</button>
           </div>
-          <div class="mapping-list">
-            ${c.mappings
-              .map(
-                (m) =>
-                  `<div class="mapping-item"><span>${escapeHtml(m.srcKey)}</span> <span class="mapping-arrow">→</span> <span>${escapeHtml(m.tgtKey)}</span></div>`
-              )
-              .join("")}
-          </div>
+          ${renderCacheTable(cache, config.mappings)}
           <div class="card-actions">
-            <button class="btn btn-outline" data-action="sync-cache" data-id="${c.id}" ${isSyncing ? "disabled" : ""}>
+            <button class="btn btn-outline" data-action="sync-cache" data-id="${config.id}" ${isSyncing ? "disabled" : ""}>
               ${isSyncing ? '<span class="spinner"></span>' : "🔄"} 同步缓存
             </button>
-            <button class="btn btn-primary" data-action="force-refresh" data-id="${c.id}" ${isSyncing ? "disabled" : ""}>
-              ${isSyncing ? '<span class="spinner"></span>' : "⚡"} 强制刷新
+            <button class="btn btn-primary" data-action="force-refresh" data-id="${config.id}" ${isSyncing ? "disabled" : ""}>
+              ${isSyncing ? '<span class="spinner"></span>' : "⚡"} 立即更新
             </button>
           </div>
           ${status ? `<div class="status-bar status-${status.status}">${status.message}</div>` : ""}
@@ -224,7 +270,7 @@ function readFormData(): SyncConfig | null {
   }
 
   const existing = editingId && editingId !== "__new__"
-    ? configs.find((c) => c.id === editingId)
+    ? configsWithCache.find((c) => c.config.id === editingId)?.config
     : null;
 
   return {
@@ -284,7 +330,7 @@ async function handleSync(configId: string, forceRefresh: boolean) {
   });
   render();
 
-  const config = configs.find((c) => c.id === configId);
+  const config = configsWithCache.find((c) => c.config.id === configId)?.config;
   if (!config) return;
 
   const message: PanelMessage = forceRefresh
