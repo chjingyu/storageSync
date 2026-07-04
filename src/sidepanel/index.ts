@@ -113,19 +113,17 @@ function renderConfigList(): string {
       return `
         <div class="config-card" data-id="${config.id}">
           <div class="card-header">
-            <div class="card-info">
-              <div class="card-name">${escapeHtml(config.name)}</div>
-              <div class="card-url">${escapeHtml(config.sourceUrl)}</div>
-              <div class="card-meta">
-                ${config.mappings.length} 个映射
-                ${hasCache ? `<button class="toggle-table" data-action="toggle-table" data-id="${config.id}">展开 ▼</button>` : ""}
-                ${status ? ` · ${status.message}` : ""}
-              </div>
-            </div>
+            <div class="card-name">${escapeHtml(config.name)}</div>
             <div class="card-header-actions">
               <button class="btn icon-btn icon-btn-edit" data-action="edit" data-id="${config.id}" title="编辑">✎</button>
               <button class="btn icon-btn icon-btn-delete" data-action="delete" data-id="${config.id}" title="删除">✕</button>
             </div>
+          </div>
+          <div class="card-url">${escapeHtml(config.sourceUrl)}</div>
+          <div class="card-meta">
+            ${config.mappings.length} 个映射
+            ${hasCache ? `<button class="toggle-table" data-action="toggle-table" data-id="${config.id}">展开 ▼</button>` : ""}
+            ${status ? ` · ${status.message}` : ""}
           </div>
           ${renderCacheTable(cache, config.mappings, config.id)}
           <div class="card-actions">

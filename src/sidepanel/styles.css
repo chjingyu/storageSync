@@ -68,7 +68,8 @@ body {
 .card-name {
   font-size: 14px;
   font-weight: 600;
-  margin-bottom: 2px;
+  flex: 1;
+  min-width: 0;
 }
 .card-url {
   font-size: 11px;
