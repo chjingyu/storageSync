@@ -182,7 +182,7 @@ async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
     }
 
     // 等待源站加载完成
-    await waitForTabLoad(sourceTabId);
+    await waitForTabLoad(sourceTabId, config.sourceUrl);
 
     // 读取源站 localStorage
     const srcKeys = config.mappings.map((m) => m.srcKey);
@@ -223,6 +223,7 @@ async function handleForceRefresh(config: SyncConfig): Promise<PanelResponse> {
     return await writeToCurrentTab(config, cacheEntry);
 
   } catch (err) {
+    console.error(`[StorageSync SW] 强制刷新失败 — url=${config.sourceUrl}`, err);
     if (sourceTabId !== null && isNewTab) {
       try { await chrome.tabs.remove(sourceTabId); } catch { /* ignore */ }
     }
@@ -266,12 +267,13 @@ async function writeToCurrentTab(
   return { success: true, data: result };
 }
 
-function waitForTabLoad(tabId: number): Promise<void> {
+function waitForTabLoad(tabId: number, url: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       chrome.tabs.onUpdated.removeListener(listener);
       chrome.tabs.onRemoved.removeListener(removeListener);
-      reject(new Error("源站加载超时"));
+      console.error(`[StorageSync SW] 源站加载超时 — tabId=${tabId}, url=${url}`);
+      reject(new Error(`源站加载超时 (${url})`));
     }, 15000);
 
     const listener = (updatedTabId: number, changeInfo: { status?: string }) => {
