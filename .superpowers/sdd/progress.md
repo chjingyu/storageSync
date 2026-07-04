@@ -11,3 +11,5 @@ Task 3: complete (commits 639e96c..b3da3b7, review clean, 1 Important+2 Minor no
 Task 4: complete (commits b3da3b7..1448f34, review clean)
 Task 5: complete (40 tests PASS, build OK, final review clean)
 Final Fix: applied (commit 9e05acc, 2 Important issues resolved)
+Task 1: complete (commits 21509eb..b5d0398)
+Task 2: complete (commits b5d0398..52ca199)
