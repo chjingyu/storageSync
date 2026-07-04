@@ -1,4 +1,5 @@
 import type { SyncConfig, KeyMapping, PanelMessage, PanelResponse, SyncResult, ConfigWithCache, CacheEntry } from "../types";
+import { computePosition, offset, flip, shift } from "@floating-ui/dom";
 
 // ===== 状态 =====
 let configsWithCache: ConfigWithCache[] = [];
@@ -49,7 +50,7 @@ function render() {
   bindEvents();
 }
 
-function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[]): string {
+function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[], configId: string): string {
   if (!cache || Object.keys(cache.data).length === 0) {
     return `<div class="cache-none">暂无缓存</div>`;
   }
@@ -59,7 +60,7 @@ function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[]): str
     .map((m) => {
       const value = cacheData[m.srcKey];
       const display = value !== undefined ? escapeHtml(value) : "—";
-      const tooltip = value !== undefined ? ` title="${escapeHtml(value)}"` : "";
+      const tooltip = value !== undefined ? ` data-tooltip="${escapeHtml(value)}"` : "";
       return `
         <tr>
           <td>${escapeHtml(m.srcKey)}</td>
@@ -72,19 +73,21 @@ function renderCacheTable(cache: CacheEntry | null, mappings: KeyMapping[]): str
   const timeStr = new Date(cache.fetchedAt).toLocaleString("zh-CN");
 
   return `
-    <table class="cache-table">
-      <thead>
-        <tr>
-          <th>源站 Key</th>
-          <th>目标 Key</th>
-          <th>缓存值</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows}
-      </tbody>
-    </table>
-    <div class="cache-time">⏱ 缓存更新于 ${timeStr}</div>`;
+    <div class="cache-table-wrap" id="table-${configId}" style="display:none">
+      <table class="cache-table">
+        <thead>
+          <tr>
+            <th>源站 Key</th>
+            <th>目标 Key</th>
+            <th>缓存值</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+      <div class="cache-time">⏱ 缓存更新于 ${timeStr}</div>
+    </div>`;
 }
 
 function formatCacheTime(ms: number): string {
@@ -105,6 +108,7 @@ function renderConfigList(): string {
     .map(({ config, cache }) => {
       const status = statusMessages.get(config.id);
       const isSyncing = syncingIds.has(config.id);
+      const hasCache = cache && Object.keys(cache.data).length > 0;
 
       return `
         <div class="config-card" data-id="${config.id}">
@@ -114,12 +118,13 @@ function renderConfigList(): string {
               <div class="card-url">${escapeHtml(config.sourceUrl)}</div>
               <div class="card-meta">
                 ${config.mappings.length} 个映射
+                ${hasCache ? `<button class="toggle-table" data-action="toggle-table" data-id="${config.id}">展开 ▼</button>` : ""}
                 ${status ? ` · ${status.message}` : ""}
               </div>
             </div>
             <button class="btn btn-danger" data-action="delete" data-id="${config.id}" title="删除">✕</button>
           </div>
-          ${renderCacheTable(cache, config.mappings)}
+          ${renderCacheTable(cache, config.mappings, config.id)}
           <div class="card-actions">
             <button class="btn btn-outline" data-action="sync-cache" data-id="${config.id}" ${isSyncing ? "disabled" : ""}>
               ${isSyncing ? '<span class="spinner"></span>' : "🔄"} 同步缓存
@@ -181,6 +186,21 @@ function bindEvents() {
       handleAction(action, id, el);
     });
   });
+
+  // === Tooltip: 缓存值列 hover ===
+  document.querySelectorAll("[data-tooltip]").forEach((el) => {
+    el.addEventListener("mouseenter", () => {
+      const content = el.getAttribute("data-tooltip");
+      if (content) showTooltip(el as HTMLElement, content);
+    });
+    el.addEventListener("mouseleave", () => {
+      hideTooltip();
+    });
+  });
+
+  // 滚动时隐藏 tooltip
+  const hideOnScroll = () => hideTooltip();
+  window.addEventListener("scroll", hideOnScroll, { once: true });
 }
 
 async function handleAction(action: string, id: string | null, el: Element) {
@@ -226,6 +246,10 @@ async function handleAction(action: string, id: string | null, el: Element) {
 
     case "force-refresh":
       if (id) await handleSync(id, true);
+      break;
+
+    case "toggle-table":
+      if (id) toggleTable(id, el);
       break;
   }
 }
@@ -362,6 +386,53 @@ async function handleSync(configId: string, forceRefresh: boolean) {
   } finally {
     syncingIds.delete(configId);
     await loadAndRender();
+  }
+}
+
+// ===== Tooltip 管理 =====
+
+let tooltipEl: HTMLDivElement | null = null;
+
+export function showTooltip(target: HTMLElement, content: string): void {
+  if (!tooltipEl) {
+    tooltipEl = document.createElement("div");
+    tooltipEl.className = "tooltip-popup";
+    document.body.appendChild(tooltipEl);
+  }
+
+  tooltipEl.textContent = content;
+  tooltipEl.classList.add("visible");
+
+  computePosition(target, tooltipEl, {
+    placement: "top",
+    middleware: [offset(6), flip(), shift({ padding: 8 })],
+  }).then(({ x, y }) => {
+    if (tooltipEl) {
+      tooltipEl.style.left = `${x}px`;
+      tooltipEl.style.top = `${y}px`;
+    }
+  });
+}
+
+export function hideTooltip(): void {
+  if (tooltipEl) {
+    tooltipEl.classList.remove("visible");
+  }
+}
+
+// ===== 表格展开/收起 =====
+
+function toggleTable(configId: string, btn: Element): void {
+  const tableWrap = document.getElementById(`table-${configId}`);
+  if (!tableWrap) return;
+
+  const isHidden = tableWrap.style.display === "none";
+  if (isHidden) {
+    tableWrap.style.display = "";
+    btn.textContent = "收起 ▲";
+  } else {
+    tableWrap.style.display = "none";
+    btn.textContent = "展开 ▼";
   }
 }
 

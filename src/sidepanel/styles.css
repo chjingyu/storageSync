@@ -299,3 +299,44 @@ body {
   margin-top: 8px;
   font-style: italic;
 }
+
+/* ===== Tooltip 弹出层 ===== */
+.tooltip-popup {
+  position: absolute;
+  z-index: 9999;
+  top: 0;
+  left: 0;
+  background: #1f2937;
+  color: #fff;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  max-width: 320px;
+  word-break: break-all;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+.tooltip-popup.visible {
+  opacity: 1;
+}
+
+/* ===== 表格容器 ===== */
+.cache-table-wrap {
+  margin-top: 8px;
+}
+
+/* ===== 展开/收起按钮 ===== */
+.toggle-table {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 4px;
+  font-family: inherit;
+}
+.toggle-table:hover {
+  text-decoration: underline;
+}
