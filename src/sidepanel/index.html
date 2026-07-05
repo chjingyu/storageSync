@@ -13,6 +13,15 @@
       <p class="placeholder">加载中...</p>
     </main>
   </div>
+  <dialog id="delete-dialog">
+    <div class="dialog-content">
+      <p>确定要删除配置 "<strong id="delete-name"></strong>" 吗？</p>
+      <div class="dialog-actions">
+        <button class="btn btn-outline" id="dialog-cancel">取消</button>
+        <button class="btn btn-danger" id="dialog-confirm">删除</button>
+      </div>
+    </div>
+  </dialog>
   <script type="module" src="./index.ts"></script>
 </body>
 </html>

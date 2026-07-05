@@ -235,11 +235,7 @@ async function handleAction(action: string, id: string | null, el: Element) {
       break;
 
     case "delete":
-      if (id && confirm("确定要删除这个配置吗？")) {
-        await sendMessage({ action: "DELETE_CONFIG", id });
-        statusMessages.delete(id);
-        await loadAndRender();
-      }
+      if (id) showDeleteDialog(id);
       break;
 
     case "cancel-form":
@@ -359,6 +355,43 @@ function addMappingRow() {
 function removeMappingRow(el: Element) {
   const row = el.closest(".mapping-inputs");
   if (row) row.remove();
+}
+
+// ===== 删除弹窗 =====
+
+function showDeleteDialog(configId: string): void {
+  const config = configsWithCache.find((c) => c.config.id === configId)?.config;
+  if (!config) return;
+
+  const dialog = document.getElementById("delete-dialog") as HTMLDialogElement;
+  const nameEl = document.getElementById("delete-name");
+  const confirmBtn = document.getElementById("dialog-confirm");
+  const cancelBtn = document.getElementById("dialog-cancel");
+  if (!dialog || !nameEl || !confirmBtn || !cancelBtn) return;
+
+  nameEl.textContent = config.name;
+
+  const cleanup = () => {
+    confirmBtn.removeEventListener("click", onConfirm);
+    cancelBtn.removeEventListener("click", onCancel);
+  };
+
+  const onConfirm = async () => {
+    cleanup();
+    dialog.close();
+    await sendMessage({ action: "DELETE_CONFIG", id: configId });
+    statusMessages.delete(configId);
+    await loadAndRender();
+  };
+
+  const onCancel = () => {
+    cleanup();
+    dialog.close();
+  };
+
+  confirmBtn.addEventListener("click", onConfirm);
+  cancelBtn.addEventListener("click", onCancel);
+  dialog.showModal();
 }
 
 // ===== 同步操作 =====
