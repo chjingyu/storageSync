@@ -119,7 +119,7 @@ function renderConfigList(): string {
               <button class="btn icon-btn icon-btn-delete" data-action="delete" data-id="${config.id}" title="删除">✕</button>
             </div>
           </div>
-          <div class="card-url">${escapeHtml(config.sourceUrl)}</div>
+          <div class="card-url" data-action="open-url" data-url="${attrEscape(config.sourceUrl)}" title="在新标签页打开">${escapeHtml(config.sourceUrl)}</div>
           <div class="card-meta">
             ${config.mappings.length} 个映射
             ${hasCache ? `<button class="toggle-table" data-action="toggle-table" data-id="${config.id}">展开 ▼</button>` : ""}
@@ -219,7 +219,10 @@ function _delegatedTooltipEnter(e: Event) {
 function _delegatedTooltipLeave(e: Event) {
   const target = (e.target as HTMLElement).closest("[data-tooltip]");
   if (!target) return;
-  hideTooltip();
+  // 延迟隐藏，给用户时间移到 tooltip 上
+  tooltipHideTimer = setTimeout(() => {
+    hideTooltip();
+  }, 200);
 }
 
 async function handleAction(action: string, id: string | null, el: Element) {
@@ -266,6 +269,12 @@ async function handleAction(action: string, id: string | null, el: Element) {
     case "toggle-table":
       if (id) toggleTable(id, el);
       break;
+
+    case "open-url": {
+      const url = el.getAttribute("data-url");
+      if (url) chrome.tabs.create({ url });
+      break;
+    }
   }
 }
 
@@ -443,11 +452,22 @@ async function handleSync(configId: string, forceRefresh: boolean) {
 // ===== Tooltip 管理 =====
 
 let tooltipEl: HTMLDivElement | null = null;
+let tooltipHideTimer: ReturnType<typeof setTimeout> | null = null;
 
 export function showTooltip(target: HTMLElement, content: string): void {
+  // 取消隐藏定时器
+  if (tooltipHideTimer) { clearTimeout(tooltipHideTimer); tooltipHideTimer = null; }
+
   if (!tooltipEl) {
     tooltipEl = document.createElement("div");
     tooltipEl.className = "tooltip-popup";
+    // tooltip 自身支持悬停
+    tooltipEl.addEventListener("mouseenter", () => {
+      if (tooltipHideTimer) { clearTimeout(tooltipHideTimer); tooltipHideTimer = null; }
+    });
+    tooltipEl.addEventListener("mouseleave", () => {
+      hideTooltip();
+    });
     document.body.appendChild(tooltipEl);
   }
 
@@ -466,6 +486,7 @@ export function showTooltip(target: HTMLElement, content: string): void {
 }
 
 export function hideTooltip(): void {
+  if (tooltipHideTimer) { clearTimeout(tooltipHideTimer); tooltipHideTimer = null; }
   if (tooltipEl) {
     tooltipEl.classList.remove("visible");
   }

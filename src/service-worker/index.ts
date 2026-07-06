@@ -292,7 +292,7 @@ function waitForTabLoad(tabId: number, url: string): Promise<void> {
       chrome.tabs.onRemoved.removeListener(removeListener);
       console.error(`[StorageSync SW] 源站加载超时 — tabId=${tabId}, url=${url}`);
       reject(new Error(`源站加载超时 (${url})`));
-    }, 15000);
+    }, 30000);
 
     const listener = (updatedTabId: number, changeInfo: { status?: string }) => {
       if (updatedTabId === tabId && changeInfo.status === "complete") {
