@@ -349,6 +349,8 @@ body {
   padding: 6px 10px;
   border-radius: 6px;
   max-width: 320px;
+  max-height: 300px;
+  overflow-y: auto;
   word-break: break-all;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   opacity: 0;
